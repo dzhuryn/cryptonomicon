@@ -31,12 +31,15 @@
               />
             </div>
 
-            <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
-              <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              CHD
+            <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap" v-if="relativeCoinList.length">
+              <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
+                v-for="coin in relativeCoinList" :key="coin.Symbol"
+                @click="addByAutocomplete(coin.Symbol)"
+              >
+              {{  coin.Symbol }}
             </span>
             </div>
-            <div class="text-sm text-red-600" v-if="addError !== ''">{{  addError }}</div>
+            <div class="text-sm text-red-600" v-if="tickerAddError !== ''">{{  tickerAddError }}</div>
 
           </div>
         </div>
@@ -151,8 +154,9 @@ export default {
   data() {
     return {
       load: false,
-      addError: null,
+      tickerAddError: "",
       coinList: [],
+      relativeCoinList: [],
       ticker: "",
       tickers: [
         // { name: "DEMO1", price: "-" },
@@ -162,8 +166,42 @@ export default {
     };
   },
 
+  watch: {
+    ticker: function (newValue) {
+
+      this.tickerAddError = '';
+
+      let relevantCoins = [];
+
+      if (newValue !== '') {
+
+        for (let key in this.coinList) {
+          let coin = this.coinList[key];
+          if (coin.Symbol.includes(newValue) || coin.FullName.includes(newValue)) {
+            relevantCoins.push(coin);
+          }
+          if (relevantCoins.length >= 4) {
+            break;
+          }
+        }
+
+      }
+
+      this.relativeCoinList = relevantCoins;
+    }
+  },
+
   methods: {
     add() {
+
+      for(let i =0;i<this.tickers.length;i++){
+
+        if(this.ticker === this.tickers[i].name){
+          this.tickerAddError = "Тікер уже додано";
+          return ;
+        }
+      }
+
       const newTicker = {
         name: this.ticker,
         price: "-"
@@ -172,18 +210,22 @@ export default {
       this.tickers.push(newTicker);
       this.ticker = "";
     },
-
+    addByAutocomplete(ticker){
+      this.ticker = ticker;
+      this.add();
+    },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(t => t !== tickerToRemove);
     }
   },
 
   async mounted() {
-    const coinsResponse =  await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true');
-    this.coinList = await coinsResponse.json();
+    let coinsResponse =  await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true');
+    coinsResponse  = await coinsResponse.json();
+
+    this.coinList = coinsResponse.Data;
 
     this.load = true;
   }
 };
 </script>
-
